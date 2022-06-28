@@ -40,7 +40,7 @@ Most of Apify actors require a [JSON](https://www.w3schools.com/js/js_json_synta
 **Input/Output options**:
 - `limit`: <[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type)> Max items to load from the dataset. Use with `offset` to paginate over the data (can reduce memory requirement of large loads).
 - `offset`: <[number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Number_type)> How many items to skip from the dataset. Use with `limit` to paginate over the data (can reduce memory requirement of large loads).
-- `outputTo`: <[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type)> Useful when you want to transform the data as you download images. Can be one one `no-output`, `key-value-store` or `dataset`.  **Default**: `dataset`.
+- `outputTo`: <[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type)> Useful when you want to transform the data as you download images. Can be one `no-output`, `key-value-store` or `dataset`.  **Default**: `dataset`.
 - `storeInput`: <[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type)> If you want to input the data from key-value store instead of dataset. Notation: `storeId-recordKey`, e.g. `kWdGzuXuKfYkrntWw-OUTPUT`.
 
 **Image upload options**
@@ -50,6 +50,10 @@ Most of Apify actors require a [JSON](https://www.w3schools.com/js/js_json_synta
 - `s3AccessKeyId`: <[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type)> Your S3 access key id. You need to set `uploadTo` to `s3`.
 - `s3SecretAccessKey`: <[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type)> Your S3 secret access key. You need to set `uploadTo` to `s3`.
 - `s3CheckIfAlreadyThere`: <[boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)> If set to `true` it will check your S3 bucket if the image file is already there before uploading. Reading is much cheaper than writing so this is useful to save money if you do a lot of reuploads. **Default**: `false`.
+- `zip`: <[boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#Boolean_type)> If set to `true`, the images won't be uploaded into the selected storage one by one, but will instead be batched into .zip file(s) for easier download and storage. **Note: this is an experimental feature**: while it is rare, if an [actor migration][migration] occurs during processing of a large image file, the zip archive upload might not be finished and the archive will become corrupted.
+- `zipFilename`: <[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type)> Name to use for the archives. The archives will be stored named `{zipFilename}-01.zip`, `{zipFilename}-02.zip` etc., creating a new archive each time the actor has to restart due to a [migration] or graceful abort.
+
+[migration]: https://docs.apify.com/actors/development/state-persistence#what-is-a-migration
 
 **Transforming functions**
 - `preDownloadFunction`: <[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#String_type)> Stringified function. It can help you prepare the data for the image download. For example you can mark some items to not be downloaded. See [Input functions](#input-functions).

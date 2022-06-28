@@ -2,6 +2,7 @@ const Apify = require('apify');
 
 const objectPath = require('object-path');
 const md5 = require('md5');
+const archiver = require('archiver');
 
 // const path = require('path');
 // const fs = require('fs');
@@ -32,6 +33,8 @@ module.exports = async ({ data, iterationInput, iterationIndex, stats, originalI
         downloadUploadOptions,
         stateFields,
         noDownloadRun,
+        zip,
+        zipFilename,
     } = iterationInput;
     console.log('loading state...');
 
@@ -154,6 +157,37 @@ module.exports = async ({ data, iterationInput, iterationIndex, stats, originalI
         return newObject;
     };
 
+    const finalizeCallbacks = [];
+    if (zip) {
+        const { uploadOptions } = downloadUploadOptions;
+        if (uploadOptions.uploadTo !== 'key-value-store') {
+            throw new Error(
+                'Uploading a ZIP file is currently only supported for `uploadTo = key-value-store`',
+            );
+        }
+        /**
+         * @type {import('apify').KeyValueStore}
+         */
+        const store = uploadOptions.storeHandle ?? (await Apify.openKeyValueStore());
+        /**
+         * @type {number}
+         */
+        const nextArchiveNumber = (await Apify.getValue('NEXT-ARCHIVE')) || 0;
+        await Apify.setValue('NEXT-ARCHIVE', nextArchiveNumber + 1);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        uploadOptions.archiveHandle = archive;
+        finalizeCallbacks.push(() => archive.finalize());
+        finalizeCallbacks.push(
+            store.setValue(
+                `${zipFilename}-${nextArchiveNumber
+                    .toString()
+                    .padStart(2, '0')}`,
+                archive,
+                { contentType: 'application/zip' },
+            ),
+        );
+    }
+
     const handleRequestFunction = async ({ request }) => {
         const { url } = request;
 
@@ -219,6 +253,18 @@ module.exports = async ({ data, iterationInput, iterationIndex, stats, originalI
     });
 
     await crawler.run();
+    const results = await Promise.allSettled(
+        finalizeCallbacks.map((callbackOrPromise) => (
+            typeof callbackOrPromise === 'function'
+                ? callbackOrPromise()
+                : callbackOrPromise
+        )),
+    );
+    for (const result of results) {
+        if (result.status === 'rejected') {
+            console.error(result.reason);
+        }
+    }
 
     console.log(`All images in iteration ${iterationIndex} were processed`);
 

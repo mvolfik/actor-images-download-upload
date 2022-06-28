@@ -87,6 +87,18 @@
             "type": "boolean",
             "description": "This option is useful if you don't want to rewrite the same image. GET requests are also cheaper than PUT requests"
         },
+        "zip": {
+            "title": "Zip",
+            "type": "boolean",
+            "description": "If enabled, the images won't be uploaded into the selected storage one by one, but will instead be batched into .zip file(s)"
+        },
+        "zipFilename": {
+            "title": "Filename used in the case of storing .zip archives",
+            "type": "string",
+            "description": "Name to use for the archives. The archives will be stored named `{zipFilename}-01.zip`, `{zipFilename}-02.zip` etc., creating a new archive each time the actor has to restart",
+            "editor": "textfield",
+            "prefill": "archive"
+        },
         "preDownloadFunction": {
             "title": "Pre-download function",
             "type": "string",

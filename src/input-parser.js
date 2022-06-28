@@ -24,6 +24,8 @@ module.exports.constantsFromInput = async (input) => {
         s3AccessKeyId,
         s3SecretAccessKey,
         s3CheckIfAlreadyThere,
+        zip = false,
+        zipFilename = 'archive',
         // Transforming functions
         preDownloadFunction,
         postDownloadFunction,
@@ -55,6 +57,7 @@ module.exports.constantsFromInput = async (input) => {
         uploadTo,
         s3Client: uploadTo === 's3' ? setS3(s3Credentials) : null,
         storeHandle: uploadStoreName ? await Apify.openKeyValueStore(uploadStoreName) : null,
+        zip,
     };
     const downloadOptions = {
         downloadTimeout,
@@ -86,6 +89,8 @@ module.exports.constantsFromInput = async (input) => {
             downloadUploadOptions,
             stateFields,
             noDownloadRun,
+            zip,
+            zipFilename,
         },
     };
     return finalInput;

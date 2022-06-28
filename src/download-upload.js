@@ -15,7 +15,13 @@ const deduplicateErrors = (errors) => {
 
 const upload = async (key, buffer, uploadOptions, contentType) => {
     const errors = [];
-    if (uploadOptions.uploadTo === 'key-value-store') {
+    if (uploadOptions.zip) {
+        if (!uploadOptions.archiveHandle) {
+            errors.push('Missing archive to upload into');
+        } else {
+            uploadOptions.archiveHandle.append(buffer, { name: key });
+        }
+    } else if (uploadOptions.uploadTo === 'key-value-store') {
         if (uploadOptions.storeHandle) {
             await uploadOptions.storeHandle.setValue(key, buffer, { contentType })
                 .catch((e) => {
@@ -27,8 +33,7 @@ const upload = async (key, buffer, uploadOptions, contentType) => {
                     errors.push(e.message);
                 });
         }
-    }
-    if (uploadOptions.uploadTo === 's3') {
+    } else if (uploadOptions.uploadTo === 's3') {
         await uploadOptions.s3Client.putObject({
             Key: key,
             Body: buffer,
