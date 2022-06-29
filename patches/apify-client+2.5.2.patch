@@ -1,0 +1,66 @@
+diff --git a/node_modules/apify-client/dist/http_client.js b/node_modules/apify-client/dist/http_client.js
+index e0d283e..e7b681d 100644
+--- a/node_modules/apify-client/dist/http_client.js
++++ b/node_modules/apify-client/dist/http_client.js
+@@ -150,6 +150,10 @@ class HttpClient {
+             onRetry: this._onRequestRetry,
+         });
+     }
++    _informAboutStreamNoRetry() {
++        this.logger.warningOnce('Request body was a stream - retrying will not work, as part of it was already consumed.');
++        this.logger.warningOnce('If you want the SDK to handle retries, collect the stream into a buffer before sending it.');
++    }
+     /**
+      * Successful responses are returned, errors and unsuccessful
+      * status codes are retried. See the following functions for the
+@@ -159,7 +163,11 @@ class HttpClient {
+         const makeRequest = async (stopTrying, attempt) => {
+             this.stats.requests++;
+             let response;
++            const requestIsStream = (0, utils_1.isStream)(config.data);
+             try {
++                if (requestIsStream) {
++                    config = { ...config, maxRedirects: 0 };
++                }
+                 response = await this.axios.request(config);
+                 if (this._isStatusOk(response.status))
+                     return response;
+@@ -172,11 +180,15 @@ class HttpClient {
+             }
+             const apiError = new apify_api_error_1.ApifyApiError(response, attempt);
+             if (this._isStatusCodeRetryable(response.status)) {
+-                throw apiError;
+-            }
+-            else {
+-                stopTrying(apiError);
++                if (requestIsStream) {
++                    this._informAboutStreamNoRetry();
++                }
++                else {
++                    // allow a retry
++                    throw apiError;
++                }
+             }
++            stopTrying(apiError);
+             return response;
+         };
+         return makeRequest;
+@@ -193,11 +205,14 @@ class HttpClient {
+             return stopTrying(err);
+         }
+         if (this._isRetryableError(err)) {
+-            throw err;
+-        }
+-        else {
+-            return stopTrying(err);
++            if ((0, utils_1.isStream)(config.data)) {
++                this._informAboutStreamNoRetry();
++            }
++            else {
++                throw err;
++            }
+         }
++        return stopTrying(err);
+     }
+     /**
+      * Axios calls req.abort() on timeouts so timeout errors will
