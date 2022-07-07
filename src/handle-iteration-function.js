@@ -330,7 +330,7 @@ module.exports = async ({ data, iterationInput, iterationIndex, stats, originalI
     clearInterval(statsInterval);
     // Saving STATE for last time
     clearInterval(stateInterval);
-    if (crawler.requestQueue.isFinished()) {
+    if (isFinished) {
         iterationState[iterationIndex].finished = true;
         iterationState[iterationIndex + 1] = {
             index: iterationIndex + 1,
