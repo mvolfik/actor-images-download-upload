@@ -9,6 +9,8 @@ Apify.main(async () => {
     let input = await Apify.getValue('INPUT');
     console.log('INPUT');
     console.dir(hideTokenFromInput(input));
+    Apify.events.addListener('migrating', () => console.log('Migrating...'));
+    Apify.events.addListener('aborting', () => console.log('Aborting...'));
 
     input = checkInput(input);
 
