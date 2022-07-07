@@ -65,7 +65,10 @@ const loadAndProcessItems = async ({
         if (items.length === 0) {
             return;
         }
-        await handleIterationFunction({ data: items, iterationInput, iterationIndex, stats, originalInput });
+        const stopIteration = await handleIterationFunction({ data: items, iterationInput, iterationIndex, stats, originalInput });
+        if (stopIteration) {
+            break;
+        }
         iterationIndex++;
     }
 };
