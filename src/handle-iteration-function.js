@@ -254,20 +254,15 @@ module.exports = async ({ data, iterationInput, iterationIndex, stats, originalI
 
     const runPromise = crawler.run().then(() => ({ isFinished: true }));
 
-    let resolvePause = () => {};
-    const pausePromise = new Promise((resolve) => { resolvePause = resolve; });
-    const originalPause = crawler.autoscaledPool.pause;
-    crawler.autoscaledPool.pause = async () => {
-        await originalPause.call(crawler.autoscaledPool);
-        resolvePause({ isFinished: false });
-    };
+    const onPausedPromise = new Promise((resolve) => {
+        const originalPause = crawler.autoscaledPool.pause;
+        crawler.autoscaledPool.pause = async () => {
+            await originalPause.call(crawler.autoscaledPool);
+            resolve({ isFinished: false });
+        };
+    });
 
-    const abortHandler = () => {
-        Apify.events.emit('aborting');
-    };
-    process.addListener('SIGINT', abortHandler);
-    const { isFinished } = await Promise.race([runPromise, pausePromise]);
-    process.removeListener('SIGINT', abortHandler);
+    const { isFinished } = await Promise.race([runPromise, onPausedPromise]);
     const results = await Promise.allSettled(
         finalizeCallbacks.map((callbackOrPromise) => (
             typeof callbackOrPromise === 'function'
@@ -279,6 +274,11 @@ module.exports = async ({ data, iterationInput, iterationIndex, stats, originalI
         if (result.status === 'rejected') {
             console.error(result.reason);
         }
+    }
+
+    if (!isFinished) {
+        console.info('Crawler was paused, stalling');
+        await new Promise(() => {});
     }
 
     console.log(`All images in iteration ${iterationIndex} were processed`);
@@ -330,20 +330,15 @@ module.exports = async ({ data, iterationInput, iterationIndex, stats, originalI
     clearInterval(statsInterval);
     // Saving STATE for last time
     clearInterval(stateInterval);
-    if (isFinished) {
-        iterationState[iterationIndex].finished = true;
-        iterationState[iterationIndex + 1] = {
-            index: iterationIndex + 1,
-            started: false,
-            finished: false,
-            pushed: 0,
-        };
-    }
+    iterationState[iterationIndex].finished = true;
+    iterationState[iterationIndex + 1] = {
+        index: iterationIndex + 1,
+        started: false,
+        finished: false,
+        pushed: 0,
+    };
     await Apify.setValue('STATE-ITERATION', iterationState);
     await Apify.setValue(`STATE-IMAGES-${iterationIndex}`, state);
     console.log('END OF ITERATION STATS:');
     stats.display();
-    if (!isFinished) {
-        return true;
-    }
 };
